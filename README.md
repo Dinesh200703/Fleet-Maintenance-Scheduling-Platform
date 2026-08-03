@@ -44,13 +44,6 @@ npm install
 npm run dev
 ```
 
----
-
-## 📸 Preview
-
-> Add screenshots of your Login, Dashboard, and Maintenance pages here.
-
----
 
 ## 🌟 Future Scope
 
@@ -60,5 +53,10 @@ npm run dev
 - 📈 Advanced Fleet Analytics
 
 ---
+---
 
-⭐ **If you like this project, consider giving it a Star!**
+## 👨‍💻 Author
+
+**Dinesh R**
+
+🎓 **B.Tech – Artificial Intelligence and Data Science** 
