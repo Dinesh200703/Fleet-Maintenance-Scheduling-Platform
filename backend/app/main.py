@@ -1,8 +1,10 @@
 from fastapi import FastAPI
 
 from app.api.auth import router as auth_router
+from app.api.vehicle import router as vehicle_router
 from app.database import Base, engine
 from app.models.user import User
+from app.models.vehicle import Vehicle
 
 # Create all database tables
 Base.metadata.create_all(bind=engine)
@@ -15,6 +17,7 @@ app = FastAPI(
 
 # Register API routes
 app.include_router(auth_router)
+app.include_router(vehicle_router)
 
 
 @app.get("/")
