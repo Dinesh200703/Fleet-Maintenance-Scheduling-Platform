@@ -1,4 +1,6 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+﻿import { Routes, Route, Navigate } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
+import { useEffect } from "react";
 
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -16,55 +18,53 @@ function ProtectedRoute({ children }) {
 }
 
 function App() {
+  // Development only: always show login page on refresh
+  useEffect(() => {
+    localStorage.removeItem("token");
+  }, []);
+
   const token = localStorage.getItem("token");
 
   return (
-    <Routes>
-      {/* Login */}
-      <Route
-        path="/"
-        element={
-          token ? (
-            <Navigate to="/dashboard" replace />
-          ) : (
-            <Login />
-          )
-        }
-      />
+    <>
+      <Routes>
+        <Route
+          path="/"
+          element={token ? <Navigate to="/dashboard" replace /> : <Login />}
+        />
 
-      {/* Dashboard */}
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
 
-      {/* Vehicles */}
-      <Route
-        path="/vehicles"
-        element={
-          <ProtectedRoute>
-            <Vehicles />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/vehicles"
+          element={
+            <ProtectedRoute>
+              <Vehicles />
+            </ProtectedRoute>
+          }
+        />
 
-      {/* Maintenance */}
-      <Route
-        path="/maintenance"
-        element={
-          <ProtectedRoute>
-            <Maintenance />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/maintenance"
+          element={
+            <ProtectedRoute>
+              <Maintenance />
+            </ProtectedRoute>
+          }
+        />
 
-      {/* Redirect unknown routes */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+
+      <Toaster position="top-right" />
+    </>
   );
 }
 
