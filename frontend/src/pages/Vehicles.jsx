@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { PlusCircle, RefreshCw, Search } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
 import Navbar from "../components/Navbar";
@@ -16,8 +15,6 @@ import {
 } from "../services/vehicleService";
 
 function Vehicles() {
-  const navigate = useNavigate();
-
   const [vehicles, setVehicles] = useState([]);
   const [filteredVehicles, setFilteredVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,6 +22,7 @@ function Vehicles() {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState(null);
 
+  // ✅ AUTO FETCH
   useEffect(() => {
     fetchVehicles();
   }, []);
@@ -36,9 +34,7 @@ function Vehicles() {
   const fetchVehicles = async () => {
     try {
       setLoading(true);
-
       const data = await getVehicles();
-
       setVehicles(data);
       setFilteredVehicles(data);
     } catch (error) {
@@ -90,11 +86,7 @@ function Vehicles() {
   };
 
   const handleDeleteVehicle = async (id) => {
-    const confirmDelete = window.confirm(
-      "Delete this vehicle?"
-    );
-
-    if (!confirmDelete) return;
+    if (!window.confirm("Delete this vehicle?")) return;
 
     try {
       await deleteVehicle(id);
@@ -107,95 +99,67 @@ function Vehicles() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar />
+    <div className="flex"> {/* ✅ THIS FIXES EVERYTHING */}
 
-      <div className="lg:flex">
-        <Sidebar />
+      {/* Sidebar */}
+      <Sidebar />
 
-        <main className="flex-1 px-5 py-6 lg:px-8">
-          <div className="mx-auto max-w-7xl space-y-6">
+      {/* Main Content */}
+      <div className="flex-1 ml-64">
+        <Navbar />
 
-            {/* Hero */}
+        <main className="p-6 space-y-6">
 
-            <section className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
+          {/* Header */}
+          <section className="flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold">Vehicle Management</h1>
+              <p className="text-gray-500">Manage your fleet efficiently</p>
+            </div>
 
-              <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex gap-3">
+              <button
+                onClick={handleAddVehicle}
+                className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded"
+              >
+                <PlusCircle size={18} />
+                Add Vehicle
+              </button>
 
-                <div>
+              <button
+                onClick={fetchVehicles}
+                className="flex items-center gap-2 border px-4 py-2 rounded"
+              >
+                <RefreshCw size={18} />
+                Refresh
+              </button>
+            </div>
+          </section>
 
-                  <p className="text-sm font-semibold uppercase tracking-[0.28em] text-blue-600">
-                    Vehicle Management
-                  </p>
-
-                  <h1 className="mt-3 text-5xl font-black text-slate-900">
-                    Manage Your Fleet
-                  </h1>
-
-                  <p className="mt-4 text-lg text-slate-600">
-                    Search, update and manage all fleet vehicles.
-                  </p>
-
-                </div>
-
-                <div className="flex gap-3">
-
-                  <button
-                    onClick={handleAddVehicle}
-                    className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-sky-500 px-5 py-3 font-semibold text-white transition hover:scale-105"
-                  >
-                    <PlusCircle size={20} />
-                    Add Vehicle
-                  </button>
-
-                  <button
-                    onClick={fetchVehicles}
-                    className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 font-semibold text-slate-700 transition hover:bg-slate-50"
-                  >
-                    <RefreshCw size={18} />
-                    Refresh
-                  </button>
-
-                </div>
-
-              </div>
-
-            </section>
-
-            {/* Search */}
-
-            <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-
-              <div className="relative max-w-lg">
-
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-
-                <input
-                  type="text"
-                  placeholder="Search vehicle number, manufacturer or model..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-12 pr-4 text-slate-700 outline-none transition focus:border-blue-500"
-                />
-
-              </div>
-
-            </section>
-
-            {/* Table */}
-
-            <VehicleTable
-              vehicles={filteredVehicles}
-              loading={loading}
-              onEdit={handleEditVehicle}
-              onDelete={handleDeleteVehicle}
+          {/* Search */}
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-3 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search vehicles..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10 pr-4 py-2 border rounded w-full"
             />
-
           </div>
+
+          {/* Table */}
+          <VehicleTable
+            vehicles={filteredVehicles}
+            loading={loading}
+            onEdit={handleEditVehicle}
+            onDelete={handleDeleteVehicle}
+          />
+
         </main>
       </div>
 
-      {/* Vehicle Modal */}
+      {/* Modal */}
       <VehicleModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}

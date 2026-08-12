@@ -18,12 +18,11 @@ function Maintenance() {
   const [maintenance, setMaintenance] = useState([]);
   const [filteredMaintenance, setFilteredMaintenance] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [search, setSearch] = useState("");
-
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedMaintenance, setSelectedMaintenance] = useState(null);
 
+  // ✅ AUTO FETCH
   useEffect(() => {
     fetchMaintenance();
   }, []);
@@ -35,9 +34,7 @@ function Maintenance() {
   const fetchMaintenance = async () => {
     try {
       setLoading(true);
-
       const data = await getMaintenance();
-
       setMaintenance(data);
       setFilteredMaintenance(data);
     } catch (error) {
@@ -103,94 +100,69 @@ function Maintenance() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar />
+    <div className="flex">
+      
+      {/* ✅ Sidebar */}
+      <Sidebar />
 
-      <div className="lg:flex">
-        <Sidebar />
+      {/* ✅ Main Content */}
+      <div className="flex-1 ml-64">
+        <Navbar />
 
-        <main className="flex-1 px-5 py-6 lg:px-8">
-          <div className="mx-auto max-w-7xl space-y-6">
+        <main className="p-6 space-y-6">
 
-            {/* Hero */}
+          {/* Header */}
+          <section className="flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold">Maintenance Management</h1>
+              <p className="text-gray-500">
+                Schedule and manage maintenance records
+              </p>
+            </div>
 
-            <section className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
+            <div className="flex gap-3">
+              <button
+                onClick={handleAdd}
+                className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded"
+              >
+                <PlusCircle size={18} />
+                Schedule
+              </button>
 
-              <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+              <button
+                onClick={fetchMaintenance}
+                className="flex items-center gap-2 border px-4 py-2 rounded"
+              >
+                <RefreshCw size={18} />
+                Refresh
+              </button>
+            </div>
+          </section>
 
-                <div>
-
-                  <p className="text-sm font-semibold uppercase tracking-[0.28em] text-blue-600">
-                    Maintenance Management
-                  </p>
-
-                  <h1 className="mt-3 text-5xl font-black text-slate-900">
-                    Vehicle Maintenance
-                  </h1>
-
-                  <p className="mt-4 text-lg text-slate-600">
-                    Schedule and manage maintenance records for your fleet.
-                  </p>
-
-                </div>
-
-                <div className="flex gap-3">
-
-                  <button
-                    onClick={handleAdd}
-                    className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-sky-500 px-5 py-3 font-semibold text-white hover:scale-105 transition"
-                  >
-                    <PlusCircle size={20} />
-                    Schedule
-                  </button>
-
-                  <button
-                    onClick={fetchMaintenance}
-                    className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 font-semibold text-slate-700 hover:bg-slate-50 transition"
-                  >
-                    <RefreshCw size={18} />
-                    Refresh
-                  </button>
-
-                </div>
-
-              </div>
-
-            </section>
-
-            {/* Search */}
-
-            <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-
-              <div className="relative max-w-lg">
-
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-
-                <input
-                  type="text"
-                  placeholder="Search maintenance..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-12 pr-4 outline-none focus:border-blue-500"
-                />
-
-              </div>
-
-            </section>
-
-            {/* Table */}
-
-            <MaintenanceTable
-              maintenance={filteredMaintenance}
-              loading={loading}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
+          {/* Search */}
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-3 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search maintenance..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10 pr-4 py-2 border rounded w-full"
             />
-
           </div>
+
+          {/* Table */}
+          <MaintenanceTable
+            maintenance={filteredMaintenance}
+            loading={loading}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
+
         </main>
       </div>
 
+      {/* Modal */}
       <MaintenanceModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}

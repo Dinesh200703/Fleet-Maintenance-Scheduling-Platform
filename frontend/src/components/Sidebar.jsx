@@ -14,6 +14,7 @@ function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // ✅ FIXED NAV ITEMS (icons added)
   const navItems = [
     {
       path: "/dashboard",
@@ -32,80 +33,59 @@ function Sidebar() {
     },
   ];
 
-  const isActive = (path) => location.pathname === path;
+  // ✅ Active route check
+  const isActive = (path) => location.pathname.startsWith(path);
 
   return (
     <aside
-      className={`sticky top-0 z-20 h-screen overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100 transition-all duration-300 ${
-        collapsed ? "w-20" : "w-72"
+      className={`h-screen bg-slate-900 text-white flex flex-col transition-all ${
+        collapsed ? "w-20" : "w-64"
       }`}
     >
-      <div className="flex h-full flex-col p-5">
-        {/* Header */}
-        <div className="flex items-center justify-between gap-3 mb-8">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold shadow-lg">
-              F
-            </div>
+      {/* ✅ Header */}
+      <div className="flex items-center justify-between p-4">
+        {!collapsed && (
+          <h2 className="text-lg font-bold">Fleet</h2>
+        )}
 
-            {!collapsed && (
-              <div>
-                <p className="text-xs uppercase tracking-[0.30em] text-slate-400">
-                  Fleet Ops
-                </p>
-                <h2 className="text-3xl font-bold text-white">
-                  Command
-                </h2>
-              </div>
-            )}
-          </div>
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="p-2 bg-slate-700 rounded"
+        >
+          {collapsed ? <ChevronRight /> : <ChevronLeft />}
+        </button>
+      </div>
 
+      {/* ✅ Navigation */}
+      <nav className="flex-1 space-y-2 px-2">
+        {navItems.map((item) => (
           <button
-            type="button"
-            onClick={() => setCollapsed((value) => !value)}
-            className="h-11 w-11 rounded-full bg-slate-800 hover:bg-slate-700 transition hover:translate-x-1 flex items-center justify-center text-slate-300 hover:text-white"
-            aria-label="Toggle sidebar"
+            key={item.path}
+            onClick={() => navigate(item.path)}
+            className={`flex items-center gap-3 w-full px-4 py-3 rounded-lg transition ${
+              isActive(item.path)
+                ? "bg-slate-700 text-white"
+                : "text-gray-300 hover:bg-slate-800"
+            }`}
           >
-            {collapsed ? (
-              <ChevronRight className="h-5 w-5" />
-            ) : (
-              <ChevronLeft className="h-5 w-5" />
-            )}
+            {item.icon}
+            {!collapsed && <span>{item.label}</span>}
           </button>
-        </div>
+        ))}
+      </nav>
 
-        {/* Navigation */}
-        <nav className="space-y-2">
-          {navItems.map((item) => (
-            <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              className={`group flex w-full items-center gap-3 rounded-2xl px-5 py-4 text-sm font-medium transition-all duration-300 hover:translate-x-1 ${
-                isActive(item.path)
-                  ? "bg-slate-800 text-white shadow-lg"
-                  : "text-slate-300 hover:bg-slate-800 hover:text-white"
-              }`}
-            >
-              {item.icon}
-              {!collapsed && <span>{item.label}</span>}
-            </button>
-          ))}
-        </nav>
-
-        {/* Logout Button - Pinned to bottom */}
-        <div className="mt-auto">
-          <button
-            type="button"
-            onClick={() => {
-              localStorage.removeItem("token");
-              navigate("/");
-            }}
-            className="group flex w-full items-center gap-3 rounded-2xl bg-slate-900 border border-slate-800 px-5 py-4 text-sm font-medium text-slate-300 transition-all duration-300 hover:bg-red-600 hover:border-red-600 hover:text-white hover:translate-x-1"
-          >
-            <LogOut className="h-5 w-5" />
-            {!collapsed && <span>Logout</span>}
-          </button>
-        </div>
+      {/* ✅ Logout */}
+      <div className="p-4">
+        <button
+          onClick={() => {
+            localStorage.removeItem("token");
+            navigate("/", { replace: true });
+          }}
+          className="flex items-center gap-3 w-full px-4 py-3 rounded-lg bg-red-500 hover:bg-red-600"
+        >
+          <LogOut size={18} />
+          {!collapsed && <span>Logout</span>}
+        </button>
       </div>
     </aside>
   );

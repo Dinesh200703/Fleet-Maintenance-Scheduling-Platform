@@ -37,9 +37,10 @@ def login_user(db: Session, email: str, password: str):
     if not verify_password(password, user.password):
         return None
 
+    # ✅ 🔥 FIXED TOKEN CREATION
     token = create_access_token(
         {
-            "sub": user.email
+            "user_id": user.id   # ✅ VERY IMPORTANT
         }
     )
 

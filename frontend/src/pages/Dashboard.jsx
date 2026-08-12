@@ -1,5 +1,12 @@
 ﻿import { useEffect, useState } from "react";
-import { ArrowUpRight, PlusCircle, Sparkles, Truck, Users, Wrench } from "lucide-react";
+import {
+  ArrowUpRight,
+  PlusCircle,
+  Sparkles,
+  Truck,
+  Users,
+  Wrench,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
@@ -16,6 +23,7 @@ function Dashboard() {
     scheduled_maintenance: 0,
     completed_maintenance: 0,
   });
+
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -26,14 +34,17 @@ function Dashboard() {
   const fetchDashboard = async () => {
     try {
       const token = localStorage.getItem("token");
+
       const response = await api.get("/dashboard/summary", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
+
       setSummary(response.data);
     } catch (error) {
       console.error("Dashboard Error:", error);
+
       if (error.response?.status === 401) {
         toast.error("Session expired. Please login again.");
         localStorage.removeItem("token");
@@ -46,20 +57,15 @@ function Dashboard() {
     }
   };
 
+  // ✅ LOADING UI FIX
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <Navbar />
-        <div className="lg:flex">
-          <Sidebar />
-          <main className="flex-1 px-4 py-8 lg:px-8">
-            <div className="mx-auto max-w-7xl space-y-6">
-              <div className="grid gap-4 xl:grid-cols-5">
-                {Array.from({ length: 5 }).map((_, index) => (
-                  <div key={index} className="h-40 rounded-3xl bg-slate-200" />
-                ))}
-              </div>
-            </div>
+      <div className="flex">
+        <Sidebar />
+        <div className="flex-1 ml-64">
+          <Navbar />
+          <main className="p-6">
+            <p className="text-gray-500">Loading dashboard...</p>
           </main>
         </div>
       </div>
@@ -67,83 +73,78 @@ function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar />
-      <div className="lg:flex">
-        <Sidebar />
-        <main className="flex-1 px-4 py-6 lg:px-8">
-          <div className="mx-auto max-w-7xl space-y-6">
-            {/* Hero Section */}
-            <section className="rounded-[2.5rem] border border-slate-200 bg-white p-10 shadow-md">
-              <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
-                <div className="max-w-3xl">
-                  <p className="text-sm font-semibold uppercase tracking-[0.24em] text-sky-600">
-                    Fleet Management
-                  </p>
-                  <h1
-                    className="mt-3 text-5xl font-black tracking-tight"
-                    style={{
-                      color: "#0f172a",
-                      opacity: 1,
-                    }}
-                  >
-                    Fleet Maintenance Scheduling Platform
-                  </h1>
-                  <p className="mt-4 text-lg leading-7 text-slate-700">
-                    Track vehicles, maintenance, and fleet performance in real time with clear, enterprise-grade insights.
-                  </p>
-                </div>
+    <div className="flex">
+      {/* ✅ Sidebar */}
+      <Sidebar />
 
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={() => navigate("/vehicles")}
-                    className="inline-flex items-center gap-2 rounded-3xl bg-gradient-to-r from-blue-600 to-sky-500 px-5 py-3 text-sm font-semibold text-white transition hover:from-blue-700 hover:to-sky-600"
-                  >
-                    <PlusCircle className="h-5 w-5" />
-                    Add Vehicle
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => navigate("/maintenance")}
-                    className="inline-flex items-center gap-2 rounded-3xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                  >
-                    <Wrench className="h-5 w-5 text-slate-700" />
-                    Schedule Maintenance
-                  </button>
-                </div>
-              </div>
-            </section>
+      {/* ✅ Main Content */}
+      <div className="flex-1 ml-64">
+        <Navbar />
 
-            {/* Statistics Cards */}
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-5">
-              <DashboardCard
-                title="Total Users"
-                value={summary.total_users}
-                icon={<Users className="h-5 w-5" />}
-              />
-              <DashboardCard
-                title="Total Vehicles"
-                value={summary.total_vehicles}
-                icon={<Truck className="h-5 w-5" />}
-              />
-              <DashboardCard
-                title="Total Maintenance"
-                value={summary.total_maintenance_records}
-                icon={<Sparkles className="h-5 w-5" />}
-              />
-              <DashboardCard
-                title="Scheduled"
-                value={summary.scheduled_maintenance}
-                icon={<Wrench className="h-5 w-5" />}
-              />
-              <DashboardCard
-                title="Completed"
-                value={summary.completed_maintenance}
-                icon={<ArrowUpRight className="h-5 w-5" />}
-              />
+        <main className="p-6 space-y-6">
+
+          {/* Hero Section */}
+          <section className="bg-white p-6 rounded-xl shadow">
+            <h1 className="text-3xl font-bold text-slate-800">
+              Fleet Maintenance Scheduling Platform
+            </h1>
+
+            <p className="text-gray-500 mt-2">
+              Track vehicles, maintenance, and fleet performance in real time.
+            </p>
+
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={() => navigate("/vehicles")}
+                className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded"
+              >
+                <PlusCircle size={18} />
+                Add Vehicle
+              </button>
+
+              <button
+                onClick={() => navigate("/maintenance")}
+                className="flex items-center gap-2 border px-4 py-2 rounded"
+              >
+                <Wrench size={18} />
+                Schedule Maintenance
+              </button>
             </div>
+          </section>
+
+          {/* Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
+            <DashboardCard
+              title="Total Users"
+              value={summary.total_users}
+              icon={<Users className="h-5 w-5" />}
+            />
+
+            <DashboardCard
+              title="Total Vehicles"
+              value={summary.total_vehicles}
+              icon={<Truck className="h-5 w-5" />}
+            />
+
+            <DashboardCard
+              title="Total Maintenance"
+              value={summary.total_maintenance_records}
+              icon={<Sparkles className="h-5 w-5" />}
+            />
+
+            <DashboardCard
+              title="Scheduled"
+              value={summary.scheduled_maintenance}
+              icon={<Wrench className="h-5 w-5" />}
+            />
+
+            <DashboardCard
+              title="Completed"
+              value={summary.completed_maintenance}
+              icon={<ArrowUpRight className="h-5 w-5" />}
+            />
           </div>
+
         </main>
       </div>
     </div>

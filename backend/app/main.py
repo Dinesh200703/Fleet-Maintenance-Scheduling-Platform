@@ -12,7 +12,7 @@ from app.models.user import User
 from app.models.vehicle import Vehicle
 from app.models.maintenance import Maintenance
 
-# Create all database tables
+# ✅ Create all database tables
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
@@ -21,32 +21,32 @@ app = FastAPI(
     description="Backend API for Fleet Maintenance Scheduling Platform"
 )
 
-# Enable CORS
+# ✅ FIXED CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:5174",
+        "http://localhost:5173",  # ✅ correct
+        "http://localhost:5174",  # ✅ correct
     ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],   # ✅ fixed
+    allow_headers=["*"],   # ✅ fixed
 )
 
-# Register API routes
+# ✅ Register API routes
 app.include_router(auth_router)
 app.include_router(vehicle_router)
 app.include_router(maintenance_router)
 app.include_router(dashboard_router)
 
-
+# ✅ Root
 @app.get("/")
 def root():
     return {
         "message": "Fleet Maintenance Scheduling Platform API is running successfully!"
     }
 
-
+# ✅ Health check
 @app.get("/health")
 def health():
     return {

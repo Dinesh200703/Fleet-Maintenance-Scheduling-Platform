@@ -10,9 +10,9 @@ router = APIRouter(
     tags=["Authentication"]
 )
 
-
-@router.post("/register", response_model=UserResponse)
-def register(user: UserCreate, db: Session = Depends(get_db)):
+# ✅ CHANGED: /register → /signup
+@router.post("/signup", response_model=UserResponse)
+def signup(user: UserCreate, db: Session = Depends(get_db)):
     db_user = create_user(db, user)
 
     if db_user is None:

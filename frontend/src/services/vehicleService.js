@@ -1,27 +1,45 @@
 import api from "../api/api";
 
-const getHeaders = () => ({
-  headers: {
-    Authorization: `Bearer ${localStorage.getItem("token")}`,
-  },
-});
-
+// ✅ GET ALL VEHICLES
 export const getVehicles = async () => {
-  const response = await api.get("/vehicles", getHeaders());
-  return response.data;
+  try {
+    const res = await api.get("/vehicles/");
+    return res.data;
+  } catch (error) {
+    console.error("GET VEHICLES ERROR:", error.response?.data || error.message);
+    throw error;
+  }
 };
 
+// ✅ ADD VEHICLE
 export const addVehicle = async (vehicle) => {
-  const response = await api.post("/vehicles", vehicle, getHeaders());
-  return response.data;
+  try {
+    const res = await api.post("/vehicles/", vehicle);
+    return res.data;
+  } catch (error) {
+    console.error("ADD VEHICLE ERROR:", error.response?.data || error.message);
+    throw error;
+  }
 };
 
+// ✅ UPDATE VEHICLE
 export const updateVehicle = async (id, vehicle) => {
-  const response = await api.put(`/vehicles/${id}`, vehicle, getHeaders());
-  return response.data;
+  try {
+    const res = await api.put(`/vehicles/${id}`, vehicle);
+    return res.data;
+  } catch (error) {
+    console.error("UPDATE VEHICLE ERROR:", error.response?.data || error.message);
+    throw error;
+  }
 };
 
+// ✅ DELETE VEHICLE
 export const deleteVehicle = async (id) => {
-  const response = await api.delete(`/vehicles/${id}`, getHeaders());
-  return response.data;
+  try {
+    const res = await api.delete(`/vehicles/${id}`);
+    return res.data;
+  } catch (error) {
+    console.error("DELETE VEHICLE ERROR:", error.response?.data || error.message);
+    throw error;
+  }
 };
