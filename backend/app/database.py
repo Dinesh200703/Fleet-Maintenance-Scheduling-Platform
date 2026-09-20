@@ -1,29 +1,34 @@
+import os
+from dotenv import load_dotenv
+
+import pymysql
+pymysql.install_as_MySQLdb()
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
-from dotenv import load_dotenv
-import os
 
-# Load environment variables
-load_dotenv()
+# 🔥 FORCE correct .env path
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env"))
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL=os.getenv("DATABASE_URL")
 
-engine = create_engine(
+print("FINAL DB URL:",DATABASE_URL)
+
+engine=create_engine(
     DATABASE_URL,
-    pool_pre_ping=True,
+    pool_pre_ping=True
 )
 
-SessionLocal = sessionmaker(
+SessionLocal=sessionmaker(
     autocommit=False,
     autoflush=False,
     bind=engine
 )
 
-Base = declarative_base()
-
+Base=declarative_base()
 
 def get_db():
-    db = SessionLocal()
+    db=SessionLocal()
     try:
         yield db
     finally:

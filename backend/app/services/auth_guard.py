@@ -1,35 +1,26 @@
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import jwt, JWTError
+from fastapi import Depends,HTTPException
+from fastapi.security import HTTPBearer,HTTPAuthorizationCredentials
+from jose import jwt,JWTError
+import os
 
-from app.core.config import settings
+security=HTTPBearer()
 
-security = HTTPBearer()
+SECRET_KEY=os.getenv("SECRET_KEY","secret")
+ALGORITHM=os.getenv("ALGORITHM","HS256")
 
-def verify_token(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
-):
-    token = credentials.credentials
+class Solution:
 
-    try:
-        payload = jwt.decode(
-            token,
-            settings.SECRET_KEY,
-            algorithms=[settings.ALGORITHM]
-        )
+ def verify_token(self,credentials:HTTPAuthorizationCredentials=Depends(security)):
+  token=credentials.credentials
+  try:
+   payload=jwt.decode(token,SECRET_KEY,algorithms=[ALGORITHM])
+   if "sub" not in payload or "role" not in payload:
+    raise HTTPException(status_code=401,detail="Invalid token payload")
+   return payload
+  except JWTError:
+   raise HTTPException(status_code=401,detail="Invalid or expired token")
 
-        user_id = payload.get("user_id")   # 🔥 IMPORTANT
+solution=Solution()
 
-        if user_id is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token"
-            )
-
-        return user_id   # ✅ return user_id
-
-    except JWTError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token is invalid or expired"
-        )
+def verify_token(credentials:HTTPAuthorizationCredentials=Depends(security)):
+ return solution.verify_token(credentials)

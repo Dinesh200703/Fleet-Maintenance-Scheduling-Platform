@@ -1,73 +1,129 @@
-﻿import { Routes, Route, Navigate } from "react-router-dom";
+﻿import { Routes,Route,Navigate,useLocation } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
+import { useEffect,useState } from "react";
 
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Vehicles from "./pages/Vehicles";
 import Maintenance from "./pages/Maintenance";
 
-// ✅ Protected Route
-function ProtectedRoute({ children }) {
-  const token = localStorage.getItem("token");
+import AdminDashboard from "./pages/AdminDashboard";
+import ManagerDashboard from "./pages/ManagerDashboard";
+import DriverDashboard from "./pages/DriverDashboard";
 
-  // 🔥 FIX: must return Navigate
-  if (!token) {
-    return <Navigate to="/" replace />;
-  }
+function ProtectedRoute({children,allowedRoles}){
+const token=localStorage.getItem("token");
+const role=localStorage.getItem("role");
 
-  return children;
+if(!token){
+return <Navigate to="/" replace/>;
 }
 
-function App() {
-  const token = localStorage.getItem("token");
+if(allowedRoles && !allowedRoles.includes(role)){
+return <Navigate to="/" replace/>;
+}
 
-  return (
-    <>
-      {/* ✅ MUST wrap everything inside Routes */}
-      <Routes>
+return children;
+}
 
-        {/* Login */}
-        <Route
-          path="/"
-          element={token ? <Navigate to="/dashboard" replace /> : <Login />}
-        />
+function App(){
 
-        {/* Protected Routes */}
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
+const [auth,setAuth]=useState({
+token:null,
+role:null
+});
 
-        <Route
-          path="/vehicles"
-          element={
-            <ProtectedRoute>
-              <Vehicles />
-            </ProtectedRoute>
-          }
-        />
+const location=useLocation();
 
-        <Route
-          path="/maintenance"
-          element={
-            <ProtectedRoute>
-              <Maintenance />
-            </ProtectedRoute>
-          }
-        />
+useEffect(()=>{
+setAuth({
+token:localStorage.getItem("token"),
+role:localStorage.getItem("role")
+});
+},[location]);
 
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+return(
+<>
+<Routes>
 
-      </Routes>
+{/* LOGIN ROUTE */}
+<Route
+path="/"
+element={
+!auth.token
+? <Login/>
+: auth.role==="admin"
+? <Navigate to="/admin" replace/>
+: auth.role==="manager"
+? <Navigate to="/manager" replace/>
+: <Navigate to="/driver" replace/>
+}
+/>
 
-      <Toaster position="top-right" />
-    </>
-  );
+{/* ROLE DASHBOARDS */}
+<Route
+path="/admin"
+element={
+<ProtectedRoute allowedRoles={["admin"]}>
+<AdminDashboard/>
+</ProtectedRoute>
+}
+/>
+
+<Route
+path="/manager"
+element={
+<ProtectedRoute allowedRoles={["manager"]}>
+<ManagerDashboard/>
+</ProtectedRoute>
+}
+/>
+
+<Route
+path="/driver"
+element={
+<ProtectedRoute allowedRoles={["driver"]}>
+<DriverDashboard/>
+</ProtectedRoute>
+}
+/>
+
+{/* SHARED */}
+<Route
+path="/dashboard"
+element={
+<ProtectedRoute allowedRoles={["admin","manager"]}>
+<Dashboard/>
+</ProtectedRoute>
+}
+/>
+
+<Route
+path="/vehicles"
+element={
+<ProtectedRoute allowedRoles={["admin","manager"]}>
+<Vehicles/>
+</ProtectedRoute>
+}
+/>
+
+<Route
+path="/maintenance"
+element={
+<ProtectedRoute allowedRoles={["admin","manager"]}>
+<Maintenance/>
+</ProtectedRoute>
+}
+/>
+
+{/* FALLBACK */}
+<Route path="*" element={<Navigate to="/" replace/>}/>
+
+</Routes>
+
+<Toaster position="top-right"/>
+</>
+);
 }
 
 export default App;
