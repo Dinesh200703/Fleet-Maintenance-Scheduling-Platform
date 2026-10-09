@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { PlusCircle, RefreshCw, Search } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -16,47 +16,39 @@ import {
 
 function Maintenance() {
   const [maintenance, setMaintenance] = useState([]);
-  const [filteredMaintenance, setFilteredMaintenance] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedMaintenance, setSelectedMaintenance] = useState(null);
 
-  // ✅ AUTO FETCH
-  useEffect(() => {
-    fetchMaintenance();
-  }, []);
-
-  useEffect(() => {
-    filterMaintenance();
-  }, [search, maintenance]);
-
-  const fetchMaintenance = async () => {
+  // âœ… AUTO FETCH
+  const fetchMaintenance = useCallback(async () => {
     try {
       setLoading(true);
       const data = await getMaintenance();
       setMaintenance(data);
-      setFilteredMaintenance(data);
     } catch (error) {
       console.error(error);
       toast.error("Unable to load maintenance records.");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const filterMaintenance = () => {
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchMaintenance();
+  }, [fetchMaintenance]);
+
+  const filteredMaintenance = useMemo(() => {
     const keyword = search.toLowerCase();
-
-    setFilteredMaintenance(
-      maintenance.filter(
+    return maintenance.filter(
         (item) =>
           item.maintenance_type.toLowerCase().includes(keyword) ||
           String(item.vehicle_id).includes(keyword) ||
           (item.status || "").toLowerCase().includes(keyword)
-      )
-    );
-  };
+      );
+  }, [maintenance, search]);
 
   const handleAdd = () => {
     setSelectedMaintenance(null);
@@ -72,17 +64,16 @@ function Maintenance() {
     try {
       if (selectedMaintenance) {
         await updateMaintenance(selectedMaintenance.id, item);
-        toast.success("Maintenance updated successfully.");
       } else {
         await addMaintenance(item);
-        toast.success("Maintenance scheduled successfully.");
       }
 
+      toast.success(selectedMaintenance ? "Maintenance updated successfully." : "Maintenance scheduled successfully.");
+      await fetchMaintenance();
       setModalOpen(false);
-      fetchMaintenance();
     } catch (error) {
       console.error(error);
-      toast.error("Operation failed.");
+      toast.error(error.response?.data?.detail || "Maintenance save failed.");
     }
   };
 
@@ -92,20 +83,20 @@ function Maintenance() {
     try {
       await deleteMaintenance(id);
       toast.success("Maintenance deleted.");
-      fetchMaintenance();
+      await fetchMaintenance();
     } catch (error) {
       console.error(error);
-      toast.error("Unable to delete maintenance.");
+      toast.error(error.response?.data?.detail || "Unable to delete maintenance.");
     }
   };
 
   return (
     <div className="flex">
       
-      {/* ✅ Sidebar */}
+      {/* âœ… Sidebar */}
       <Sidebar />
 
-      {/* ✅ Main Content */}
+      {/* âœ… Main Content */}
       <div className="flex-1 ml-64">
         <Navbar />
 
@@ -164,6 +155,7 @@ function Maintenance() {
 
       {/* Modal */}
       <MaintenanceModal
+        key={selectedMaintenance?.id ?? "new"}
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         onSave={handleSave}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { X } from "lucide-react";
 
 function VehicleModal({
@@ -7,29 +7,15 @@ function VehicleModal({
   onSave,
   vehicle,
 }) {
-  const [formData, setFormData] = useState({
+  const emptyVehicle = {
     vehicle_number: "",
     vehicle_type: "",
     manufacturer: "",
     model: "",
     manufacture_year: "",
     fuel_type: "",
-  });
-
-  useEffect(() => {
-    if (vehicle) {
-      setFormData(vehicle);
-    } else {
-      setFormData({
-        vehicle_number: "",
-        vehicle_type: "",
-        manufacturer: "",
-        model: "",
-        manufacture_year: "",
-        fuel_type: "",
-      });
-    }
-  }, [vehicle]);
+  };
+  const [formData, setFormData] = useState(() => vehicle || emptyVehicle);
 
   if (!isOpen) return null;
 
@@ -45,7 +31,7 @@ function VehicleModal({
 
     onSave({
       ...formData,
-      manufacture_year: Number(formData.manufacture_year),
+      manufacture_year: formData.manufacture_year ? Number(formData.manufacture_year) : null,
     });
   };
 
@@ -59,6 +45,7 @@ function VehicleModal({
           </h2>
 
           <button
+            type="button"
             onClick={onClose}
             className="rounded-xl p-2 hover:bg-slate-100"
           >

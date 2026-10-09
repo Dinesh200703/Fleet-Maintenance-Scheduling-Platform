@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { PlusCircle, RefreshCw, Search } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -16,46 +16,38 @@ import {
 
 function Vehicles() {
   const [vehicles, setVehicles] = useState([]);
-  const [filteredVehicles, setFilteredVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState(null);
 
-  // ✅ AUTO FETCH
-  useEffect(() => {
-    fetchVehicles();
-  }, []);
-
-  useEffect(() => {
-    filterVehicles();
-  }, [search, vehicles]);
-
-  const fetchVehicles = async () => {
+  // âœ… AUTO FETCH
+  const fetchVehicles = useCallback(async () => {
     try {
       setLoading(true);
       const data = await getVehicles();
       setVehicles(data);
-      setFilteredVehicles(data);
     } catch (error) {
       console.error(error);
       toast.error("Unable to fetch vehicles.");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const filterVehicles = () => {
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchVehicles();
+  }, [fetchVehicles]);
+
+  const filteredVehicles = useMemo(() => {
     const keyword = search.toLowerCase();
-
-    const filtered = vehicles.filter((vehicle) =>
+    return vehicles.filter((vehicle) =>
       vehicle.vehicle_number.toLowerCase().includes(keyword) ||
       vehicle.manufacturer.toLowerCase().includes(keyword) ||
       vehicle.model.toLowerCase().includes(keyword)
     );
-
-    setFilteredVehicles(filtered);
-  };
+  }, [search, vehicles]);
 
   const handleAddVehicle = () => {
     setSelectedVehicle(null);
@@ -71,17 +63,16 @@ function Vehicles() {
     try {
       if (selectedVehicle) {
         await updateVehicle(selectedVehicle.id, vehicle);
-        toast.success("Vehicle updated successfully.");
       } else {
         await addVehicle(vehicle);
-        toast.success("Vehicle added successfully.");
       }
 
+      toast.success(selectedVehicle ? "Vehicle updated successfully." : "Vehicle added successfully.");
+      await fetchVehicles();
       setModalOpen(false);
-      fetchVehicles();
     } catch (error) {
       console.error(error);
-      toast.error("Operation failed.");
+      toast.error(error.response?.data?.detail || "Vehicle save failed.");
     }
   };
 
@@ -91,15 +82,15 @@ function Vehicles() {
     try {
       await deleteVehicle(id);
       toast.success("Vehicle deleted.");
-      fetchVehicles();
+      await fetchVehicles();
     } catch (error) {
       console.error(error);
-      toast.error("Unable to delete vehicle.");
+      toast.error(error.response?.data?.detail || "Unable to delete vehicle.");
     }
   };
 
   return (
-    <div className="flex"> {/* ✅ THIS FIXES EVERYTHING */}
+    <div className="flex"> {/* âœ… THIS FIXES EVERYTHING */}
 
       {/* Sidebar */}
       <Sidebar />
@@ -161,6 +152,7 @@ function Vehicles() {
 
       {/* Modal */}
       <VehicleModal
+        key={selectedVehicle?.id ?? "new"}
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         onSave={handleSaveVehicle}

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ArrowUpRight,
   PlusCircle,
@@ -27,35 +27,24 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchDashboard();
-  }, []);
-
-  const fetchDashboard = async () => {
+  const fetchDashboard = useCallback(async () => {
     try {
-      const token = localStorage.getItem("token");
-
-      const response = await api.get("/dashboard/summary", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await api.get("/dashboard/summary");
 
       setSummary(response.data);
     } catch (error) {
       console.error("Dashboard Error:", error);
 
-      if (error.response?.status === 401) {
-        toast.error("Session expired. Please login again.");
-        localStorage.removeItem("token");
-        window.location.href = "/";
-      } else {
-        toast.error("Failed to load dashboard data.");
-      }
+      toast.error(error.response?.data?.detail || "Failed to load dashboard data.");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchDashboard();
+  }, [fetchDashboard]);
 
   // ✅ LOADING UI FIX
   if (loading) {

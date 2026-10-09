@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { X } from "lucide-react";
 
 function MaintenanceModal({
@@ -7,33 +7,17 @@ function MaintenanceModal({
   onSave,
  maintenance,
 }) {
-  const [formData, setFormData] = useState({
-    vehicle_id: "",
-    maintenance_type: "",
-    scheduled_date: "",
-    status: "Scheduled",
-    remarks: "",
-  });
-
-  useEffect(() => {
-    if (maintenance) {
-      setFormData({
+  const [formData, setFormData] = useState(() => maintenance ? {
         vehicle_id: maintenance.vehicle_id,
         maintenance_type: maintenance.maintenance_type,
         scheduled_date: maintenance.scheduled_date,
-        status: maintenance.status,
         remarks: maintenance.remarks || "",
-      });
-    } else {
-      setFormData({
+      } : {
         vehicle_id: "",
         maintenance_type: "",
         scheduled_date: "",
-        status: "Scheduled",
         remarks: "",
       });
-    }
-  }, [maintenance]);
 
   if (!isOpen) return null;
 
@@ -65,6 +49,7 @@ function MaintenanceModal({
           </h2>
 
           <button
+            type="button"
             onClick={onClose}
             className="rounded-xl p-2 hover:bg-slate-100"
           >
@@ -106,17 +91,6 @@ function MaintenanceModal({
             className="rounded-xl border border-slate-300 p-3"
             required
           />
-
-          <select
-            name="status"
-            value={formData.status}
-            onChange={handleChange}
-            className="rounded-xl border border-slate-300 p-3"
-          >
-            <option>Scheduled</option>
-            <option>Completed</option>
-            <option>Pending</option>
-          </select>
 
           <textarea
             name="remarks"

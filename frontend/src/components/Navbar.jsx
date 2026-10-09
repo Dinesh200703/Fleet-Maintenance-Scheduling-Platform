@@ -1,16 +1,19 @@
 ﻿import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Bell, ChevronDown, LogOut, Search, UserCircle } from "lucide-react";
 import toast from "react-hot-toast";
 
 function Navbar() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const navigate = useNavigate();
+  const role = localStorage.getItem("role");
+  const displayName = localStorage.getItem("user_name") || (role ? role[0].toUpperCase() + role.slice(1) : "User");
 
   const logout = () => {
-    localStorage.removeItem("token");
+    ["token", "role", "driver_id", "user_id", "user_name"].forEach((key) => localStorage.removeItem(key));
     toast.success("Logged out successfully");
 
-    // ✅ FIXED
-    window.location.href = "/";
+    navigate("/", { replace: true });
   };
 
   return (
@@ -41,7 +44,7 @@ function Navbar() {
             className="flex h-12 items-center gap-3 rounded-2xl border px-5 bg-white"
           >
             <UserCircle className="h-6 w-6 text-blue-600" />
-            <span className="font-semibold text-slate-700">Admin</span>
+            <span className="font-semibold text-slate-700">{displayName}</span>
             <ChevronDown className="h-4 w-4 text-slate-600" />
           </button>
 

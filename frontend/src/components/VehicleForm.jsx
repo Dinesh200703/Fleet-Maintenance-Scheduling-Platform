@@ -1,39 +1,23 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { X } from "lucide-react";
 
 function VehicleForm({ isOpen, onClose, onSubmit, editingVehicle }) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(() => ({
     vehicle_number: "",
     vehicle_type: "",
     manufacturer: "",
     model: "",
     manufacture_year: "",
     fuel_type: "",
-  });
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    if (editingVehicle) {
-      setFormData({
+    ...(editingVehicle ? {
         vehicle_number: editingVehicle.vehicle_number || "",
         vehicle_type: editingVehicle.vehicle_type || "",
         manufacturer: editingVehicle.manufacturer || "",
         model: editingVehicle.model || "",
         manufacture_year: editingVehicle.manufacture_year || "",
         fuel_type: editingVehicle.fuel_type || "",
-      });
-    } else {
-      setFormData({
-        vehicle_number: "",
-        vehicle_type: "",
-        manufacturer: "",
-        model: "",
-        manufacture_year: "",
-        fuel_type: "",
-      });
-    }
-  }, [editingVehicle, isOpen]);
+    } : {}),
+  }));
 
   const handleChange = (e) => {
     setFormData({

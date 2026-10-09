@@ -1,231 +1,31 @@
-import { useEffect,useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import toast from "react-hot-toast";
+import api from "../api/api";
 
-function ManagerDashboard(){
-
-const [vehicles,setVehicles]=useState([]);
-const [maintenance,setMaintenance]=useState([]);
-
-const [selectedDriver,setSelectedDriver]=useState("");
-const [selectedVehicle,setSelectedVehicle]=useState("");
-
-const [newMaintenance,setNewMaintenance]=useState({
-vehicle_id:"",
-maintenance_type:"",
-scheduled_date:"",
-remarks:""
-});
-
-const navigate=useNavigate();
-const token=localStorage.getItem("token");
-
-const api=axios.create({
-baseURL:"http://127.0.0.1:8000",
-headers:{Authorization:`Bearer ${token}`}
-});
-
-useEffect(()=>{
-fetchAll();
-},[]);
-
-const fetchAll=async()=>{
-try{
-const vehiclesRes=await api.get("/vehicles/");
-const maintenanceRes=await api.get("/maintenance/");
-
-setVehicles(vehiclesRes.data||[]);
-setMaintenance(maintenanceRes.data||[]);
-}catch(err){
-if(err.response?.status===401){
-localStorage.clear();
-navigate("/");
+function ManagerDashboard() {
+  const [fleet, setFleet] = useState([]); const [drivers, setDrivers] = useState([]); const [records, setRecords] = useState([]); const [summary, setSummary] = useState(null);
+  const [driverId, setDriverId] = useState(""); const [vehicleId, setVehicleId] = useState(""); const [filter, setFilter] = useState("All");
+  const [form, setForm] = useState({ vehicle_id: "", driver_id: "", maintenance_type: "", scheduled_date: "", remarks: "" }); const navigate = useNavigate();
+  const load = useCallback(async () => { const [v,d,m,s] = await Promise.all([api.get("/vehicles/"),api.get("/users/drivers"),api.get("/maintenance/"),api.get("/dashboard/manager")]); setFleet(v.data);setDrivers(d.data);setRecords(m.data);setSummary(s.data); }, []);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load().catch(() => toast.error("Unable to load manager data"));
+    const refreshTimer = window.setInterval(() => load().catch(() => {}), 30000);
+    return () => window.clearInterval(refreshTimer);
+  },[load]);
+  const logout = () => { ["token","role","driver_id","user_id","user_name"].forEach((key)=>localStorage.removeItem(key));navigate("/",{replace:true}); };
+  const assign = async (e) => { e.preventDefault(); try { await api.patch(`/vehicles/${vehicleId}/assignment`,{driver_id:Number(driverId)}); } catch(error) { toast.error(error.response?.data?.detail || "Vehicle assignment failed"); return; } toast.success("Vehicle assigned");setDriverId("");setVehicleId("");try { await load(); } catch { toast.error("Vehicle assigned, but dashboard data could not refresh."); } };
+  const schedule = async (e) => { e.preventDefault(); try { await api.post("/maintenance/",{...form,vehicle_id:Number(form.vehicle_id),assigned_driver_id:form.driver_id ? Number(form.driver_id) : null}); } catch(error) { toast.error(error.response?.data?.detail || "Could not schedule maintenance"); return; } toast.success("Maintenance scheduled");setForm({vehicle_id:"",driver_id:"",maintenance_type:"",scheduled_date:"",remarks:""});try { await load(); } catch { toast.error("Maintenance was scheduled, but dashboard data could not refresh."); } };
+  const visible = filter === "All" ? records : records.filter((r)=>r.status===filter);
+  const dist = records.reduce((counts, record) => ({...counts, [record.status]: (counts[record.status] || 0) + 1}), {}); const max = Math.max(1,...Object.values(dist));
+  return <main className="min-h-screen bg-gray-100"><header className="flex justify-between bg-white px-6 py-4 shadow"><div><h1 className="text-2xl font-bold text-blue-600">Manager Dashboard</h1><p>Fleet assignments and maintenance oversight</p></div><button onClick={logout} className="rounded bg-red-500 px-4 py-2 text-white">Logout</button></header>
+    <section className="grid grid-cols-2 gap-4 p-6 md:grid-cols-4">{[["Drivers",summary?.drivers_total],["Active drivers",summary?.drivers_active],["Vehicles",fleet.length],["Attention",summary?.tasks_requiring_attention]].map(([k,v])=><article key={k} className="rounded-xl bg-white p-5 shadow"><p className="text-gray-500">{k}</p><strong className="text-2xl text-blue-600">{v ?? 0}</strong></article>)}</section>
+    <section className="grid gap-5 px-6 lg:grid-cols-2"><form onSubmit={assign} className="rounded-xl bg-white p-5 shadow"><h2 className="mb-3 font-semibold">Assign vehicle to driver</h2><div className="flex flex-wrap gap-2"><select required value={vehicleId} onChange={(e)=>setVehicleId(e.target.value)} className="rounded border p-2"><option value="">Available vehicle</option>{fleet.filter((v)=>v.is_active && (v.status==="Available" || v.status==="Assigned")).map((v)=><option key={v.id} value={v.id}>{v.vehicle_number} (#{v.id})</option>)}</select><select required value={driverId} onChange={(e)=>setDriverId(e.target.value)} className="rounded border p-2"><option value="">Select driver by ID</option>{drivers.map((d)=><option key={d.id} value={d.id}>#{d.id} · {d.full_name}</option>)}</select><button className="rounded bg-blue-600 px-4 py-2 text-white">Assign</button></div></form>
+      <form onSubmit={schedule} className="rounded-xl bg-white p-5 shadow"><h2 className="mb-3 font-semibold">Schedule maintenance</h2><div className="grid gap-2 sm:grid-cols-2"><select required value={form.vehicle_id} onChange={(e)=>setForm({...form,vehicle_id:e.target.value})} className="rounded border p-2"><option value="">Vehicle</option>{fleet.filter((v)=>v.is_active).map((v)=><option key={v.id} value={v.id}>{v.vehicle_number} (#{v.id})</option>)}</select><select value={form.driver_id} onChange={(e)=>setForm({...form,driver_id:e.target.value})} className="rounded border p-2"><option value="">Use vehicle's assigned driver</option>{drivers.map((d)=><option key={d.id} value={d.id}>#{d.id} · {d.full_name}</option>)}</select><input required placeholder="Maintenance type" value={form.maintenance_type} onChange={(e)=>setForm({...form,maintenance_type:e.target.value})} className="rounded border p-2"/><input required type="date" value={form.scheduled_date} onChange={(e)=>setForm({...form,scheduled_date:e.target.value})} className="rounded border p-2"/><input placeholder="Instructions" value={form.remarks} onChange={(e)=>setForm({...form,remarks:e.target.value})} className="rounded border p-2 sm:col-span-2"/><button className="rounded bg-green-600 px-4 py-2 text-white sm:col-span-2">Create maintenance assignment</button></div></form></section>
+    <section className="grid gap-5 p-6 lg:grid-cols-2"><article className="rounded-xl bg-white p-5 shadow"><h2 className="mb-3 font-semibold">Driver monitoring</h2><div className="overflow-auto"><table className="w-full text-left text-sm"><thead><tr><th className="p-2">ID / Driver</th><th>Vehicles</th><th>Jobs</th><th>Pending</th><th>Accepted</th><th>Declined</th><th>Done</th></tr></thead><tbody>{(summary?.drivers||[]).map((d)=><tr key={d.id} className="border-t"><td className="p-2">#{d.id} {d.full_name}</td><td>{d.vehicle_number ? `${d.vehicle_number} (#${d.vehicle_id})` : "—"}</td><td>{d.assignment_count}</td><td>{d.pending}</td><td>{d.accepted}</td><td>{d.declined}</td><td>{d.completed}</td></tr>)}</tbody></table></div></article>
+      <article className="rounded-xl bg-white p-5 shadow"><h2 className="mb-3 font-semibold">Maintenance workload</h2>{Object.entries(dist).length===0?<p>No maintenance data</p>:Object.entries(dist).map(([label,count])=><div key={label} className="mb-2"><div className="flex justify-between text-sm"><span>{label}</span><span>{count}</span></div><div className="h-3 rounded bg-gray-100"><div className="h-3 rounded bg-blue-600" style={{width:`${count*100/max}%`}}/></div></div>)}</article></section>
+    <section className="px-6 pb-8"><div className="mb-3 flex items-center justify-between"><h2 className="text-xl font-semibold">Maintenance records</h2><select value={filter} onChange={(e)=>setFilter(e.target.value)} className="rounded border p-2"><option>All</option>{[...new Set(records.map((r)=>r.status))].map((s)=><option key={s}>{s}</option>)}</select></div><div className="overflow-auto rounded-xl bg-white shadow"><table className="w-full text-left"><thead className="bg-blue-600 text-white"><tr>{["ID","Vehicle","Driver","Task","Date","Response","Status","Admin remarks"].map((x)=><th key={x} className="p-3">{x}</th>)}</tr></thead><tbody>{visible.map((m)=><tr key={m.id} className="border-b"><td className="p-3">{m.id}</td><td>{m.vehicle_id}</td><td>{m.assigned_driver_id ?? "—"}</td><td>{m.maintenance_type}</td><td>{m.scheduled_date}</td><td>{m.assignment_response}</td><td>{m.status}</td><td>{m.verification_remarks || "—"}</td></tr>)}</tbody></table></div></section>
+  </main>;
 }
-}
-};
-
-const assignDriver=async()=>{
-try{
-await api.put(`/vehicles/${selectedVehicle}`,{
-driver_id:parseInt(selectedDriver)
-});
-fetchAll();
-}catch(err){
-console.log(err.response?.data);
-}
-};
-
-const createMaintenance=async(e)=>{
-e.preventDefault();
-try{
-await api.post("/maintenance/",{
-vehicle_id:parseInt(newMaintenance.vehicle_id),
-maintenance_type:newMaintenance.maintenance_type,
-scheduled_date:newMaintenance.scheduled_date,
-remarks:newMaintenance.remarks||null
-});
-setNewMaintenance({
-vehicle_id:"",
-maintenance_type:"",
-scheduled_date:"",
-remarks:""
-});
-fetchAll();
-}catch(err){
-console.log(err.response?.data);
-}
-};
-
-const logout=()=>{
-localStorage.clear();
-navigate("/");
-};
-
-return(
-<div className="min-h-screen bg-gray-100">
-
-<div className="bg-white shadow flex justify-between items-center px-6 py-4">
-<h1 className="text-2xl font-bold text-blue-600">Manager Dashboard</h1>
-<button onClick={logout} className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600">
-Logout
-</button>
-</div>
-
-<div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
-<div className="bg-white p-6 rounded-xl shadow">
-<p className="text-gray-500">Vehicles</p>
-<h2 className="text-3xl font-bold text-blue-600">{vehicles.length}</h2>
-</div>
-<div className="bg-white p-6 rounded-xl shadow">
-<p className="text-gray-500">Maintenance</p>
-<h2 className="text-3xl font-bold text-blue-600">{maintenance.length}</h2>
-</div>
-</div>
-
-<div className="p-6">
-
-<div className="bg-white p-6 rounded-xl shadow mb-6">
-<h2 className="text-blue-600 font-semibold mb-4">Assign Driver</h2>
-<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-<input
-placeholder="Vehicle ID"
-value={selectedVehicle}
-onChange={(e)=>setSelectedVehicle(e.target.value)}
-className="p-3 border rounded-lg"
-/>
-<input
-placeholder="Driver ID"
-value={selectedDriver}
-onChange={(e)=>setSelectedDriver(e.target.value)}
-className="p-3 border rounded-lg"
-/>
-<button onClick={assignDriver} className="bg-blue-600 text-white rounded-lg">
-Assign
-</button>
-</div>
-</div>
-
-<div className="bg-white p-6 rounded-xl shadow mb-6">
-<h2 className="text-blue-600 font-semibold mb-4">Create Maintenance</h2>
-
-<form onSubmit={createMaintenance} className="grid grid-cols-1 md:grid-cols-4 gap-4">
-
-<input
-placeholder="Vehicle ID"
-value={newMaintenance.vehicle_id}
-onChange={(e)=>setNewMaintenance({...newMaintenance,vehicle_id:e.target.value})}
-className="p-3 border rounded-lg"
-/>
-
-<input
-placeholder="Maintenance Type"
-value={newMaintenance.maintenance_type}
-onChange={(e)=>setNewMaintenance({...newMaintenance,maintenance_type:e.target.value})}
-className="p-3 border rounded-lg"
-/>
-
-<input
-type="date"
-value={newMaintenance.scheduled_date}
-onChange={(e)=>setNewMaintenance({...newMaintenance,scheduled_date:e.target.value})}
-className="p-3 border rounded-lg"
-/>
-
-<input
-placeholder="Remarks"
-value={newMaintenance.remarks}
-onChange={(e)=>setNewMaintenance({...newMaintenance,remarks:e.target.value})}
-className="p-3 border rounded-lg"
-/>
-
-<button className="bg-green-500 text-white rounded-lg">
-Create
-</button>
-
-</form>
-
-</div>
-
-<div className="bg-white rounded-xl shadow mb-6 overflow-hidden">
-<h2 className="p-4 text-blue-600 font-semibold">Vehicles</h2>
-<table className="w-full">
-<thead className="bg-blue-600 text-white">
-<tr>
-<th className="p-3">ID</th>
-<th className="p-3">Number</th>
-<th className="p-3">Type</th>
-<th className="p-3">Manufacturer</th>
-<th className="p-3">Model</th>
-</tr>
-</thead>
-<tbody>
-{vehicles.map((v)=>(
-<tr key={v.id} className="border-b hover:bg-gray-100">
-<td className="p-3">{v.id}</td>
-<td className="p-3">{v.vehicle_number}</td>
-<td className="p-3">{v.vehicle_type}</td>
-<td className="p-3">{v.manufacturer}</td>
-<td className="p-3">{v.model}</td>
-</tr>
-))}
-</tbody>
-</table>
-</div>
-
-<div className="bg-white rounded-xl shadow overflow-hidden">
-<h2 className="p-4 text-blue-600 font-semibold">Maintenance</h2>
-<table className="w-full">
-<thead className="bg-blue-600 text-white">
-<tr>
-<th className="p-3">ID</th>
-<th className="p-3">Vehicle</th>
-<th className="p-3">Type</th>
-<th className="p-3">Date</th>
-<th className="p-3">Status</th>
-</tr>
-</thead>
-<tbody>
-{maintenance.map((m)=>(
-<tr key={m.id} className="border-b hover:bg-gray-100">
-<td className="p-3">{m.id}</td>
-<td className="p-3">{m.vehicle_id}</td>
-<td className="p-3">{m.maintenance_type}</td>
-<td className="p-3">{m.scheduled_date}</td>
-<td className="p-3">
-<span className={`px-2 py-1 rounded text-white ${m.status==="completed"?"bg-green-500":"bg-yellow-500"}`}>
-{m.status}
-</span>
-</td>
-</tr>
-))}
-</tbody>
-</table>
-</div>
-
-</div>
-
-</div>
-);
-}
-
 export default ManagerDashboard;

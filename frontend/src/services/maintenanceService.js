@@ -7,13 +7,13 @@ const getHeaders = () => ({
 });
 
 export const getMaintenance = async () => {
-  const response = await api.get("/maintenance", getHeaders());
+  const response = await api.get("/maintenance/", getHeaders());
   return response.data;
 };
 
 export const addMaintenance = async (maintenance) => {
   const response = await api.post(
-    "/maintenance",
+    "/maintenance/",
     maintenance,
     getHeaders()
   );

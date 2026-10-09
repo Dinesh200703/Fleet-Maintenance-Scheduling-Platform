@@ -1,65 +1,37 @@
-from fastapi import APIRouter,Depends,HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from app.core.security import create_access_token, hash_password, verify_password
 from app.database import get_db
-from app.schemas.user import UserCreate,UserLogin,UserResponse
 from app.models.user import User
-from datetime import datetime,timedelta
-from jose import jwt
-from passlib.context import CryptContext
-import os
+from app.schemas.user import UserCreate, UserLogin, UserResponse
+from app.services.auth_guard import get_current_user, require_roles
 
-router=APIRouter(prefix="/auth",tags=["Authentication"])
+router = APIRouter(prefix="/auth", tags=["Authentication"])
 
-SECRET_KEY=os.getenv("SECRET_KEY","secret")
-ALGORITHM=os.getenv("ALGORITHM","HS256")
-
-pwd_context=CryptContext(schemes=["bcrypt"],deprecated="auto")
-
-@router.post("/signup",response_model=UserResponse)
-def signup(user:UserCreate,db:Session=Depends(get_db)):
-    existing=db.query(User).filter(User.email==user.email).first()
-    if existing:
-        raise HTTPException(status_code=400,detail="Email already registered")
-
-    hashed=pwd_context.hash(user.password)
-
-    new_user=User(
-        full_name=user.full_name,
-        email=user.email,
-        password=hashed,
-        role=user.role
-    )
-
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-
-    return new_user
-
+@router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+def signup(data: UserCreate, db: Session = Depends(get_db)):
+    if db.query(User).filter(User.email == data.email).first():
+        raise HTTPException(status_code=409, detail="Email already registered")
+    user = User(full_name=data.full_name, email=data.email, password=hash_password(data.password), role=data.role)
+    db.add(user); db.commit(); db.refresh(user)
+    return user
 
 @router.post("/login")
-def login(user:UserLogin,db:Session=Depends(get_db)):
-    db_user=db.query(User).filter(User.email==user.email).first()
+def login(credentials: UserLogin, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == credentials.email).first()
+    if user is None or not user.is_active or not verify_password(credentials.password, user.password):
+        raise HTTPException(status_code=401, detail="Invalid email or password", headers={"WWW-Authenticate": "Bearer"})
+    token = create_access_token({"sub": str(user.id), "role": user.role, "email": user.email})
+    return {"access_token": token, "token_type": "bearer", "user_id": user.id, "role": user.role, "user": UserResponse.model_validate(user).model_dump(mode="json")}
 
-    if not db_user:
-        raise HTTPException(status_code=401,detail="Invalid email or password")
+@router.get("/me", response_model=UserResponse)
+def read_current_user(user: User = Depends(get_current_user)):
+    return user
 
-    if not pwd_context.verify(user.password,db_user.password):
-        raise HTTPException(status_code=401,detail="Invalid email or password")
+@router.get("/users", response_model=list[UserResponse])
+def list_users(db: Session = Depends(get_db), _: User = Depends(require_roles("admin"))):
+    return db.query(User).order_by(User.id).all()
 
-    expire=datetime.utcnow()+timedelta(minutes=30)
-
-    payload={
-        "sub":str(db_user.id),
-        "email":db_user.email,
-        "role":db_user.role,
-        "exp":expire
-    }
-
-    token=jwt.encode(payload,SECRET_KEY,algorithm=ALGORITHM)
-
-    return {
-        "access_token":token,
-        "token_type":"bearer",
-        "role":db_user.role
-    }
+@router.get("/drivers", response_model=list[UserResponse])
+def list_drivers(db: Session = Depends(get_db), _: User = Depends(require_roles("manager", "admin"))):
+    return db.query(User).filter(User.role == "driver", User.is_active.is_(True)).order_by(User.id).all()

@@ -13,11 +13,13 @@ function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const role = String(localStorage.getItem("role") || "").trim().toLowerCase();
+  const dashboardPath = { driver: "/driver", manager: "/manager", admin: "/admin" }[role] || "/dashboard";
 
   // ✅ FIXED NAV ITEMS (icons added)
   const navItems = [
     {
-      path: "/dashboard",
+      path: dashboardPath,
       label: "Dashboard",
       icon: <LayoutDashboard className="h-5 w-5" />,
     },
@@ -78,7 +80,7 @@ function Sidebar() {
       <div className="p-4">
         <button
           onClick={() => {
-            localStorage.removeItem("token");
+            ["token", "role", "driver_id", "user_id", "user_name"].forEach((key) => localStorage.removeItem(key));
             navigate("/", { replace: true });
           }}
           className="flex items-center gap-3 w-full px-4 py-3 rounded-lg bg-red-500 hover:bg-red-600"

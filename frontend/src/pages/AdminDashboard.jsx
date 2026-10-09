@@ -1,214 +1,27 @@
-import { useEffect,useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import toast from "react-hot-toast";
+import api from "../api/api";
 
-function AdminDashboard(){
-
-const [users,setUsers]=useState([]);
-const [vehicles,setVehicles]=useState([]);
-const [maintenance,setMaintenance]=useState([]);
-
-const [newVehicle,setNewVehicle]=useState({
-vehicle_number:"",
-vehicle_type:"",
-manufacturer:"",
-model:"",
-manufacture_year:"",
-fuel_type:""
-});
-
-const navigate=useNavigate();
-const token=localStorage.getItem("token");
-
-const api=axios.create({
-baseURL:"http://127.0.0.1:8000",
-headers:{Authorization:`Bearer ${token}`}
-});
-
-useEffect(()=>{
-fetchAll();
-},[]);
-
-const fetchAll=async()=>{
-try{
-const usersRes=await api.get("/users/");
-const vehiclesRes=await api.get("/vehicles/");
-const maintenanceRes=await api.get("/maintenance/");
-
-setUsers(usersRes.data||[]);
-setVehicles(vehiclesRes.data||[]);
-setMaintenance(maintenanceRes.data||[]);
-}catch(err){
-if(err.response?.status===401){
-localStorage.clear();
-navigate("/");
+function AdminDashboard() {
+  const [summary,setSummary]=useState(null);const [users,setUsers]=useState([]);const [vehicles,setVehicles]=useState([]);const [records,setRecords]=useState([]);const [remarks,setRemarks]=useState({});const [newVehicle,setNewVehicle]=useState({vehicle_number:"",vehicle_type:"",manufacturer:"",model:"",manufacture_year:"",fuel_type:""});const navigate=useNavigate();
+  const load=useCallback(async()=>{const [s,u,v,m]=await Promise.all([api.get("/dashboard/summary"),api.get("/users/"),api.get("/vehicles/"),api.get("/maintenance/")]);setSummary(s.data);setUsers(u.data);setVehicles(v.data);setRecords(m.data);},[]);
+  useEffect(()=>{
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load().catch(()=>toast.error("Unable to load admin dashboard"));
+    const refreshTimer=window.setInterval(()=>load().catch(()=>{}),30000);
+    return ()=>window.clearInterval(refreshTimer);
+  },[load,navigate]);
+  const logout=()=>{["token","role","driver_id","user_id","user_name"].forEach((key)=>localStorage.removeItem(key));navigate("/",{replace:true});};
+  const deactivateUser=async(id)=>{if(Number(localStorage.getItem("user_id"))===id){toast.error("You cannot deactivate your own account");return;}try{await api.delete(`/users/${id}`);}catch(error){toast.error(error.response?.data?.detail||"Could not deactivate user");return;}toast.success("User deactivated");try{await load();}catch{toast.error("User was deactivated, but dashboard data could not refresh.");}};
+  const review=async(id,decision)=>{try{await api.post(`/maintenance/${id}/verify`,{decision,remarks:remarks[id]||null});}catch(error){toast.error(error.response?.data?.detail||"Review failed");return;}toast.success(decision==="Verified"?"Completion verified":"Completion returned for correction");try{await load();}catch{toast.error("Review was saved, but dashboard data could not refresh.");}};
+  const addVehicle=async(e)=>{e.preventDefault();try{await api.post("/vehicles/",{...newVehicle,manufacture_year:newVehicle.manufacture_year?Number(newVehicle.manufacture_year):null});}catch(error){toast.error(error.response?.data?.detail||"Could not add vehicle");return;}toast.success("Vehicle added");setNewVehicle({vehicle_number:"",vehicle_type:"",manufacturer:"",model:"",manufacture_year:"",fuel_type:""});try{await load();}catch{toast.error("Vehicle was added, but dashboard data could not refresh.");}};
+  const distribution=summary?.status_distribution||[];const max=Math.max(1,...distribution.map((x)=>x.count));const activity=summary?.activity||[];const maxActivity=Math.max(1,...activity.map((x)=>x.count));
+  return <main className="min-h-screen bg-gray-100"><header className="flex justify-between bg-white px-6 py-4 shadow"><div><h1 className="text-2xl font-bold text-blue-600">Admin Dashboard</h1><p>System overview and completion verification</p></div><button onClick={logout} className="rounded bg-red-500 px-4 py-2 text-white">Logout</button></header>
+    <section className="grid grid-cols-2 gap-4 p-6 md:grid-cols-4">{[["Drivers",summary?.total_drivers],["Managers",summary?.total_managers],["Vehicles",summary?.total_vehicles],["Maintenance",summary?.total_maintenance_records],["Completed",summary?.completed_maintenance],["Scheduled",summary?.scheduled_maintenance],["Pending response",summary?.pending_maintenance],["In progress",summary?.in_progress_maintenance],["Overdue",summary?.overdue_maintenance],["Declined",summary?.declined_assignments],["Submitted for review",summary?.completion_submissions]].map(([k,v])=><article key={k} className="rounded-xl bg-white p-5 shadow"><p className="text-gray-500">{k}</p><strong className="text-2xl text-blue-600">{v??0}</strong></article>)}</section>
+    <section className="grid gap-5 px-6 lg:grid-cols-2"><article className="rounded-xl bg-white p-5 shadow"><h2 className="mb-3 font-semibold">Maintenance status distribution</h2>{distribution.length===0?<p>No records yet</p>:distribution.map(({status,count})=><div key={status} className="mb-2"><div className="flex justify-between text-sm"><span>{status}</span><span>{count}</span></div><div className="h-3 rounded bg-gray-100"><div className="h-3 rounded bg-indigo-600" style={{width:`${count*100/max}%`}}/></div></div>)}</article><article className="rounded-xl bg-white p-5 shadow"><h2 className="mb-3 font-semibold">Accounts</h2><div className="max-h-64 overflow-auto">{users.map((u)=><p key={u.id} className="flex items-center justify-between border-b py-2">#{u.id} · {u.full_name} · {u.role} · {u.is_active?"Active":"Inactive"}{u.is_active&&<button onClick={()=>deactivateUser(u.id)} className="rounded bg-red-600 px-2 py-1 text-xs text-white">Deactivate</button>}</p>)}</div></article></section>
+        <section className="px-6"><article className="rounded-xl bg-white p-5 shadow"><h2 className="mb-3 font-semibold">Maintenance activity over time</h2>{activity.length===0?<p className="text-gray-500">No activity data yet.</p>:<div className="flex h-40 items-end gap-3 overflow-x-auto">{activity.map((point)=><div key={point.month} className="flex min-w-14 flex-col items-center gap-1"><span className="text-xs">{point.count}</span><div className="w-8 rounded-t bg-sky-600" style={{height:`${Math.max(8,point.count/maxActivity*112)}px`}}/><span className="text-xs text-gray-500">{point.month}</span></div>)}</div>}</article></section><section className="p-6"><h2 className="mb-3 text-xl font-semibold">Completion review</h2><div className="overflow-auto rounded-xl bg-white shadow"><table className="w-full text-left"><thead className="bg-blue-600 text-white"><tr>{["ID","Vehicle","Driver","Task","Response","Status","Driver report","Submitted","Verified by / at","Review"].map((x)=><th key={x} className="p-3">{x}</th>)}</tr></thead><tbody>{records.map((m)=><tr key={m.id} className="border-b align-top"><td className="p-3">{m.id}</td><td>{m.vehicle?.vehicle_number||m.vehicle_id}</td><td>{m.assigned_driver_id??"—"}</td><td>{m.maintenance_type}<p>{m.scheduled_date}</p></td><td>{m.assignment_response}</td><td>{m.status}</td><td className="max-w-xs">{m.completion_remarks||"—"}</td><td>{m.completion_submitted_at?new Date(m.completion_submitted_at).toLocaleString():"—"}</td><td>{m.verified_by ? `#${m.verified_by} · ${new Date(m.verified_at).toLocaleString()}` : "—"}</td><td className="min-w-56 p-2">{m.status==="CompletionSubmitted"?<><input value={remarks[m.id]||""} onChange={(e)=>setRemarks({...remarks,[m.id]:e.target.value})} placeholder="Admin remarks" className="mb-2 w-full rounded border p-2"/><div className="flex gap-2"><button onClick={()=>review(m.id,"Verified")} className="rounded bg-green-600 px-3 py-1 text-white">Verify</button><button onClick={()=>review(m.id,"Rejected")} className="rounded bg-red-600 px-3 py-1 text-white">Reject</button></div></>:m.verification_remarks||"—"}</td></tr>)}</tbody></table></div></section>
+    <section className="grid gap-5 px-6 pb-8 lg:grid-cols-2"><form onSubmit={addVehicle} className="rounded-xl bg-white p-5 shadow"><h2 className="mb-3 font-semibold">Add vehicle</h2><div className="grid gap-2 sm:grid-cols-2">{[["vehicle_number","Registration"],["vehicle_type","Type"],["manufacturer","Manufacturer"],["model","Model"],["manufacture_year","Year"],["fuel_type","Fuel type"]].map(([key,label])=><input key={key} required={key!=="manufacture_year"} placeholder={label} value={newVehicle[key]} onChange={(e)=>setNewVehicle({...newVehicle,[key]:e.target.value})} className="rounded border p-2"/>)}<button className="rounded bg-blue-600 p-2 text-white sm:col-span-2">Add vehicle</button></div></form><article className="rounded-xl bg-white p-5 shadow"><h2 className="mb-3 font-semibold">Fleet vehicles</h2>{vehicles.map((v)=><p key={v.id} className="border-b py-2">{v.vehicle_number} · {v.vehicle_type} · Driver {v.driver_id??"unassigned"}</p>)}</article></section>
+  </main>;
 }
-}
-};
-
-const addVehicle=async(e)=>{
-e.preventDefault();
-try{
-await api.post("/vehicles/",{
-vehicle_number:newVehicle.vehicle_number,
-vehicle_type:newVehicle.vehicle_type,
-manufacturer:newVehicle.manufacturer,
-model:newVehicle.model,
-manufacture_year:Number(newVehicle.manufacture_year),
-fuel_type:newVehicle.fuel_type
-});
-setNewVehicle({
-vehicle_number:"",
-vehicle_type:"",
-manufacturer:"",
-model:"",
-manufacture_year:"",
-fuel_type:""
-});
-fetchAll();
-}catch(err){}
-};
-
-const deleteUser=async(id)=>{
-try{
-await api.delete(`/users/${id}`);
-fetchAll();
-}catch(err){}
-};
-
-const logout=()=>{
-localStorage.clear();
-navigate("/");
-};
-
-return(
-<div className="min-h-screen bg-gray-100">
-
-<div className="bg-white shadow flex justify-between items-center px-6 py-4">
-<h1 className="text-2xl font-bold text-blue-600">Admin Dashboard</h1>
-<button onClick={logout} className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600">
-Logout
-</button>
-</div>
-
-<div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6">
-<div className="bg-white p-6 rounded-xl shadow">
-<p className="text-gray-500">Users</p>
-<h2 className="text-3xl font-bold text-blue-600">{users.length}</h2>
-</div>
-<div className="bg-white p-6 rounded-xl shadow">
-<p className="text-gray-500">Vehicles</p>
-<h2 className="text-3xl font-bold text-blue-600">{vehicles.length}</h2>
-</div>
-<div className="bg-white p-6 rounded-xl shadow">
-<p className="text-gray-500">Maintenance</p>
-<h2 className="text-3xl font-bold text-blue-600">{maintenance.length}</h2>
-</div>
-</div>
-
-<div className="p-6">
-
-<div className="bg-white p-6 rounded-xl shadow mb-6">
-<h2 className="text-lg font-semibold text-blue-600 mb-4">Add Vehicle</h2>
-<form onSubmit={addVehicle} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-
-<input value={newVehicle.vehicle_number} onChange={(e)=>setNewVehicle({...newVehicle,vehicle_number:e.target.value})} placeholder="Vehicle Number" className="p-3 border rounded-lg"/>
-
-<input value={newVehicle.vehicle_type} onChange={(e)=>setNewVehicle({...newVehicle,vehicle_type:e.target.value})} placeholder="Vehicle Type" className="p-3 border rounded-lg"/>
-
-<input value={newVehicle.manufacturer} onChange={(e)=>setNewVehicle({...newVehicle,manufacturer:e.target.value})} placeholder="Manufacturer" className="p-3 border rounded-lg"/>
-
-<input value={newVehicle.model} onChange={(e)=>setNewVehicle({...newVehicle,model:e.target.value})} placeholder="Model" className="p-3 border rounded-lg"/>
-
-<input value={newVehicle.manufacture_year} onChange={(e)=>setNewVehicle({...newVehicle,manufacture_year:e.target.value})} placeholder="Year" className="p-3 border rounded-lg"/>
-
-<input value={newVehicle.fuel_type} onChange={(e)=>setNewVehicle({...newVehicle,fuel_type:e.target.value})} placeholder="Fuel Type" className="p-3 border rounded-lg"/>
-
-<button className="bg-blue-600 text-white rounded-lg col-span-full py-2">Add Vehicle</button>
-
-</form>
-</div>
-
-<div className="bg-white rounded-xl shadow mb-6 overflow-hidden">
-<h2 className="p-4 text-blue-600 font-semibold">Users</h2>
-<table className="w-full">
-<thead className="bg-blue-600 text-white">
-<tr>
-<th className="p-3">ID</th>
-<th className="p-3">Name</th>
-<th className="p-3">Email</th>
-<th className="p-3">Role</th>
-<th className="p-3">Action</th>
-</tr>
-</thead>
-<tbody>
-{users.map((u)=>(
-<tr key={u.id} className="border-b hover:bg-gray-100">
-<td className="p-3">{u.id}</td>
-<td className="p-3">{u.full_name}</td>
-<td className="p-3">{u.email}</td>
-<td className="p-3">{u.role}</td>
-<td className="p-3">
-<button onClick={()=>deleteUser(u.id)} className="bg-red-500 text-white px-3 py-1 rounded">
-Delete
-</button>
-</td>
-</tr>
-))}
-</tbody>
-</table>
-</div>
-
-<div className="bg-white rounded-xl shadow mb-6 overflow-hidden">
-<h2 className="p-4 text-blue-600 font-semibold">Vehicles</h2>
-<table className="w-full">
-<thead className="bg-blue-600 text-white">
-<tr>
-<th className="p-3">ID</th>
-<th className="p-3">Number</th>
-<th className="p-3">Type</th>
-<th className="p-3">Model</th>
-</tr>
-</thead>
-<tbody>
-{vehicles.map((v)=>(
-<tr key={v.id} className="border-b hover:bg-gray-100">
-<td className="p-3">{v.id}</td>
-<td className="p-3">{v.vehicle_number}</td>
-<td className="p-3">{v.vehicle_type}</td>
-<td className="p-3">{v.model}</td>
-</tr>
-))}
-</tbody>
-</table>
-</div>
-
-<div className="bg-white rounded-xl shadow overflow-hidden">
-<h2 className="p-4 text-blue-600 font-semibold">Maintenance</h2>
-<table className="w-full">
-<thead className="bg-blue-600 text-white">
-<tr>
-<th className="p-3">ID</th>
-<th className="p-3">Vehicle</th>
-<th className="p-3">Status</th>
-</tr>
-</thead>
-<tbody>
-{maintenance.map((m)=>(
-<tr key={m.id} className="border-b hover:bg-gray-100">
-<td className="p-3">{m.id}</td>
-<td className="p-3">{m.vehicle_id}</td>
-<td className="p-3">{m.status}</td>
-</tr>
-))}
-</tbody>
-</table>
-</div>
-
-</div>
-
-</div>
-);
-}
-
 export default AdminDashboard;

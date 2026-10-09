@@ -1,25 +1,34 @@
-from pydantic import BaseModel,EmailStr
-from typing import Literal,Optional
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from typing import Literal
 
-class UserBase(BaseModel):
- full_name:str
- email:EmailStr
+class UserCreate(BaseModel):
+    full_name: str = Field(min_length=1, max_length=100)
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=128)
+    role: Literal["driver", "manager", "admin"] = "driver"
 
-class UserCreate(UserBase):
- password:str
- role:Literal["admin","manager","driver"]="driver"
+    @field_validator("password")
+    @classmethod
+    def password_fits_bcrypt(cls, value: str) -> str:
+        if len(value.encode("utf-8")) > 72:
+            raise ValueError("Password must be at most 72 UTF-8 bytes")
+        return value
 
 class UserLogin(BaseModel):
- email:EmailStr
- password:str
+    email: EmailStr
+    password: str
 
-class UserResponse(UserBase):
- id:int
- role:Literal["admin","manager","driver"]
- is_active:bool
+    @field_validator("password")
+    @classmethod
+    def password_fits_bcrypt(cls, value: str) -> str:
+        if len(value.encode("utf-8")) > 72:
+            raise ValueError("Password must be at most 72 UTF-8 bytes")
+        return value
 
- class Config:
-  from_attributes=True
-
-class UserWithVehicles(UserResponse):
- vehicles:Optional[list]=[]
+class UserResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    full_name: str
+    email: EmailStr
+    role: Literal["admin", "manager", "driver"]
+    is_active: bool
